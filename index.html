@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tan Shuen Xian</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0b0d;
+      --surface:   #111114;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #e8e6e1;
+      --muted:     #6b6b72;
+      --accent:    #7c9fff;
+      --accent-dim:#3a5599;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Inter', sans-serif;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 300;
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    /* ── VIEWPORT STACK ── */
+    #viewport {
+      width: 100%; height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      will-change: transform, opacity;
+      /* default: hidden below */
+      transform: translateY(100%);
+      opacity: 0;
+      pointer-events: none;
+      transition: none;
+    }
+
+    .page.active {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: all;
+      transition: none;
+    }
+
+    /* pages animate IN depending on direction */
+    .page.enter-from-below  { animation: enterBelow  0.75s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .page.enter-from-above  { animation: enterAbove  0.75s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .page.exit-to-above     { animation: exitAbove   0.6s  cubic-bezier(0.4,0,1,1)     forwards; }
+    .page.exit-to-below     { animation: exitBelow   0.6s  cubic-bezier(0.4,0,1,1)     forwards; }
+
+    @keyframes enterBelow { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes enterAbove { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes exitAbove  { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+    @keyframes exitBelow  { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 4rem;
+      background: rgba(11,11,13,0.6);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+
+    .nav-links { display: flex; gap: 2.5rem; list-style: none; }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+
+    /* ── SECTION INDICATOR (dots) ── */
+    #dots {
+      position: fixed;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .dot-btn {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+      padding: 0;
+    }
+    .dot-btn.active {
+      background: var(--accent);
+      transform: scale(1.5);
+    }
+
+    /* ── PAGE COUNTER ── */
+    #page-counter {
+      position: fixed;
+      bottom: 2rem;
+      right: 2.5rem;
+      z-index: 200;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    #page-counter span { color: var(--accent); }
+
+    /* ── SCROLL ARROWS ── */
+    #scroll-down, #scroll-up {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      background: none;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.4s;
+      color: var(--muted);
+      padding: 0.5rem;
+    }
+    #scroll-down { bottom: 1.8rem; }
+    #scroll-up   { top: 5.5rem; }
+    #scroll-down.visible, #scroll-up.visible { opacity: 1; }
+    #scroll-down:hover, #scroll-up:hover { color: var(--accent); }
+    #scroll-down svg, #scroll-up svg { display: block; }
+
+    /* ── CURSOR ── */
+    .cursor-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%,-50%);
+    }
+    .cursor-ring {
+      width: 28px; height: 28px;
+      border: 1px solid rgba(124,159,255,0.4);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: width 0.2s, height 0.2s;
+    }
+
+    /* ── BTN ── */
+    .btn {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.7rem 1.6rem;
+      border-radius: 2px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid;
+      display: inline-block;
+    }
+    .btn-primary { background: var(--accent); color: #0b0b0d; border-color: var(--accent); }
+    .btn-primary:hover { background: #9db5ff; border-color: #9db5ff; }
+    .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .section-label::after {
+      content: '';
+      width: 60px; height: 1px;
+      background: var(--border);
+    }
+
+    .tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(124,159,255,0.06);
+      border: 1px solid rgba(124,159,255,0.12);
+      border-radius: 2px;
+      padding: 0.2rem 0.7rem;
+      cursor: default;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tag:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ═══════════════════════════════════════
+       PAGE 0 — HERO
+    ═══════════════════════════════════════ */
+    #page-hero { flex-direction: column; }
+
+    #particle-canvas {
+      position: absolute;
+      inset: 0; width: 100%; height: 100%;
+    }
+
+    .hero-content {
+      position: relative; z-index: 2;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-name {
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .hero-name span { color: var(--accent); }
+
+    .hero-sub {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 400px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      gap: 1rem;
+      pointer-events: all;
+    }
+
+    /* hero children animate in on load */
+    #page-hero.active .hero-eyebrow { animation: fadeUp 0.7s 0.1s both; }
+    #page-hero.active .hero-name    { animation: fadeUp 0.7s 0.25s both; }
+    #page-hero.active .hero-sub     { animation: fadeUp 0.7s 0.4s both; }
+    #page-hero.active .hero-cta     { animation: fadeUp 0.7s 0.55s both; }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(22px); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 1 — ABOUT
+       Entrance: content panels scale+fade in from center
+    ═══════════════════════════════════════ */
+    .page-inner {
+      width: 100%; max-width: 1100px;
+      padding: 7rem 4rem 4rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .about-text p { color: var(--muted); margin-bottom: 1rem; }
+    .about-text p strong { color: var(--text); font-weight: 400; }
+
+    .about-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.2rem 1.4rem;
+      transition: border-color 0.2s, transform 0.2s;
+      cursor: default;
+    }
+    .stat-card:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
+
+    .stat-num {
+      font-family: var(--mono);
+      font-size: 1.8rem;
+      color: var(--accent);
+      font-weight: 300;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .stat-label { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    /* About entrance: panels pop in with stagger */
+    #page-about.enter-from-below .about-text,
+    #page-about.enter-from-above .about-text {
+      animation: scaleIn 0.65s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    #page-about.enter-from-below .about-stats,
+    #page-about.enter-from-above .about-stats {
+      animation: scaleIn 0.65s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    #page-about.enter-from-below .section-label,
+    #page-about.enter-from-above .section-label {
+      animation: fadeUp 0.5s 0.05s both;
+    }
+
+    @keyframes scaleIn {
+      from { opacity:0; transform: scale(0.93) translateY(16px); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 2 — SKILLS
+       Entrance: tags fly in row by row
+    ═══════════════════════════════════════ */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .skill-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.4rem;
+      transition: border-color 0.2s;
+    }
+    .skill-group:hover { border-color: var(--accent-dim); }
+
+    .skill-group-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    /* skills stagger by group index */
+    #page-skills.enter-from-below .skill-group:nth-child(1),
+    #page-skills.enter-from-above .skill-group:nth-child(1) { animation: slideRight 0.55s 0.1s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .skill-group:nth-child(2),
+    #page-skills.enter-from-above .skill-group:nth-child(2) { animation: slideRight 0.55s 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .skill-group:nth-child(3),
+    #page-skills.enter-from-above .skill-group:nth-child(3) { animation: slideRight 0.55s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .skill-group:nth-child(4),
+    #page-skills.enter-from-above .skill-group:nth-child(4) { animation: slideRight 0.55s 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .section-label,
+    #page-skills.enter-from-above .section-label { animation: fadeUp 0.4s 0.0s both; }
+
+    @keyframes slideRight {
+      from { opacity:0; transform: translateX(-32px); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 3 — EXPERIENCE
+       Entrance: timeline draws down line first, then items fade
+    ═══════════════════════════════════════ */
+    .timeline { position: relative; padding-left: 1.5rem; }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    #page-experience.enter-from-below .timeline::before,
+    #page-experience.enter-from-above .timeline::before {
+      animation: drawLine 0.7s 0.2s ease both;
+    }
+
+    @keyframes drawLine {
+      from { transform: scaleY(0); transform-origin: top; }
+      to   { transform: scaleY(1); transform-origin: top; }
+    }
+
+    .timeline-item { position: relative; padding-bottom: 3rem; padding-left: 1.5rem; }
+    .timeline-item:last-child { padding-bottom: 0; }
+
+    .timeline-dot {
+      position: absolute; left: -1.55rem; top: 8px;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+      transition: transform 0.2s;
+    }
+    .timeline-item:hover .timeline-dot { transform: scale(1.5); }
+
+    .timeline-date { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+    .timeline-title { font-size: 17px; font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+    .timeline-org { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-bottom: 0.8rem; }
+    .timeline-body { color: var(--muted); font-size: 15px; }
+    .timeline-body li { list-style: none; padding-left: 1rem; position: relative; margin-bottom: 0.3rem; }
+    .timeline-body li::before { content: '—'; position: absolute; left: 0; color: var(--accent-dim); font-family: var(--mono); }
+
+    #page-experience.enter-from-below .timeline-item,
+    #page-experience.enter-from-above .timeline-item { animation: fadeUp 0.6s 0.4s both; }
+    #page-experience.enter-from-below .section-label,
+    #page-experience.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    /* ═══════════════════════════════════════
+       PAGE 4 — PROJECTS
+       Entrance: cards flip/rise with stagger
+    ═══════════════════════════════════════ */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.8rem;
+      transition: border-color 0.25s, transform 0.25s;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+    .project-card:hover { border-color: var(--accent-dim); transform: translateY(-4px); }
+    .project-card:hover::before { transform: scaleX(1); }
+
+    .project-number { font-family: var(--mono); font-size: 11px; color: var(--accent-dim); margin-bottom: 0.8rem; }
+    .project-title  { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 0.8rem; }
+    .project-desc   { font-size: 13px; color: var(--muted); margin-bottom: 1.2rem; line-height: 1.6; }
+    .project-tech   { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+    #page-projects.enter-from-below .project-card:nth-child(1),
+    #page-projects.enter-from-above .project-card:nth-child(1) { animation: riseCard 0.6s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-projects.enter-from-below .project-card:nth-child(2),
+    #page-projects.enter-from-above .project-card:nth-child(2) { animation: riseCard 0.6s 0.27s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-projects.enter-from-below .project-card:nth-child(3),
+    #page-projects.enter-from-above .project-card:nth-child(3) { animation: riseCard 0.6s 0.39s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-projects.enter-from-below .section-label,
+    #page-projects.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    @keyframes riseCard {
+      from { opacity:0; transform: translateY(40px) scale(0.96); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 5 — EDUCATION
+    ═══════════════════════════════════════ */
+    .edu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .edu-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.5rem 1.6rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .edu-card:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
+
+    .edu-year { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 0.5rem; }
+    .edu-degree { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+    .edu-school { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+
+    #page-education.enter-from-below .edu-card:nth-child(1),
+    #page-education.enter-from-above .edu-card:nth-child(1) { animation: slideRight 0.55s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-education.enter-from-below .edu-card:nth-child(2),
+    #page-education.enter-from-above .edu-card:nth-child(2) { animation: slideRight 0.55s 0.28s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-education.enter-from-below .edu-card:nth-child(3),
+    #page-education.enter-from-above .edu-card:nth-child(3) { animation: slideRight 0.55s 0.41s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-education.enter-from-below .section-label,
+    #page-education.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    /* ═══════════════════════════════════════
+       PAGE 6 — CONTACT
+       Entrance: split reveal (left text / right links)
+    ═══════════════════════════════════════ */
+    .contact-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .contact-text h2 { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 300; margin-bottom: 0.8rem; }
+    .contact-text p  { color: var(--muted); font-size: 15px; margin-bottom: 2rem; }
+
+    .contact-links { display: flex; flex-direction: column; gap: 1rem; }
+
+    .contact-link {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .contact-link:hover { color: var(--accent); }
+
+    .contact-link-icon {
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      flex-shrink: 0;
+      transition: border-color 0.2s;
+    }
+    .contact-link:hover .contact-link-icon { border-color: var(--accent); }
+
+    #page-contact.enter-from-below .contact-text,
+    #page-contact.enter-from-above .contact-text { animation: slideFromLeft 0.65s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-contact.enter-from-below .contact-links,
+    #page-contact.enter-from-above .contact-links { animation: slideFromRight 0.65s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-contact.enter-from-below .section-label,
+    #page-contact.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    @keyframes slideFromLeft  { from { opacity:0; transform: translateX(-40px); } to { opacity:1; transform:none; } }
+    @keyframes slideFromRight { from { opacity:0; transform: translateX(40px);  } to { opacity:1; transform:none; } }
+
+    /* ── FOOTER inside contact page ── */
+    .page-footer {
+      position: absolute;
+      bottom: 1.5rem; left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 4rem;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { display: none; }
+      .page-inner { padding: 5rem 1.5rem 3rem; }
+      .about-grid, .contact-wrapper { grid-template-columns: 1fr; gap: 2rem; }
+      #dots { display: none; }
+      .cursor-dot, .cursor-ring { display: none; }
+      .page-footer { padding: 0 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo" data-goto="0">TSX</div>
+    <ul class="nav-links">
+      <li><a data-goto="0">Home</a></li>
+      <li><a data-goto="1">About</a></li>
+      <li><a data-goto="2">Skills</a></li>
+      <li><a data-goto="3">Experience</a></li>
+      <li><a data-goto="4">Projects</a></li>
+      <li><a data-goto="5">Education</a></li>
+      <li><a data-goto="6">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- SECTION DOTS -->
+  <div id="dots">
+    <button class="dot-btn" data-goto="0" title="Home"></button>
+    <button class="dot-btn" data-goto="1" title="About"></button>
+    <button class="dot-btn" data-goto="2" title="Skills"></button>
+    <button class="dot-btn" data-goto="3" title="Experience"></button>
+    <button class="dot-btn" data-goto="4" title="Projects"></button>
+    <button class="dot-btn" data-goto="5" title="Education"></button>
+    <button class="dot-btn" data-goto="6" title="Contact"></button>
+  </div>
+
+  <button id="scroll-up" aria-label="Previous section">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+  <button id="scroll-down" aria-label="Next section">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+
+  <div id="page-counter"><span id="cur-page">01</span> / 07</div>
+
+  <div id="viewport">
+
+    <!-- PAGE 0: HERO -->
+    <div class="page active" id="page-hero">
+      <canvas id="particle-canvas"></canvas>
+      <div class="hero-content">
+        <p class="hero-eyebrow">Computer Science · AI · Full-Stack</p>
+        <h1 class="hero-name">Tan <span>Shuen Xian</span></h1>
+        <p class="hero-sub">Building data-driven software &amp; technical simulations.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" data-goto="4">View work</a>
+          <a class="btn btn-outline" data-goto="6">Get in touch</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 1: ABOUT -->
+    <div class="page" id="page-about">
+      <div class="page-inner">
+        <p class="section-label">About</p>
+        <div class="about-grid">
+          <div class="about-text">
+            <p>I'm a <strong>Computer Science (AI) student</strong> at the University of Nottingham Malaysia, graduating in 2027. I have a strong interest in backend systems, data pipelines, and technical simulations.</p>
+            <p>Outside of code, I work with <strong>SolidWorks and Blender</strong> to build high-fidelity 3D models — combining engineering precision with software thinking.</p>
+            <p>I'm trilingual in <strong>English, Mandarin, and Malay</strong>, and thrive in cross-functional teams bridging design and engineering.</p>
+          </div>
+          <div class="about-stats">
+            <div class="stat-card">
+              <div class="stat-num">3+</div>
+              <div class="stat-label">Projects shipped</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num">5</div>
+              <div class="stat-label">Languages in code</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num">2027</div>
+              <div class="stat-label">Expected graduation</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num">3</div>
+              <div class="stat-label">Spoken languages</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: SKILLS -->
+    <div class="page" id="page-skills">
+      <div class="page-inner">
+        <p class="section-label">Skills</p>
+        <div class="skills-grid">
+          <div class="skill-group">
+            <div class="skill-group-title">Programming</div>
+            <div class="skill-tags">
+              <span class="tag">Java</span><span class="tag">C</span><span class="tag">Python</span>
+              <span class="tag">C#</span><span class="tag">HTML/CSS</span><span class="tag">PHP</span><span class="tag">SQL</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-title">3D Modelling</div>
+            <div class="skill-tags">
+              <span class="tag">SolidWorks</span><span class="tag">Blender</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-title">Tools</div>
+            <div class="skill-tags">
+              <span class="tag">VS Code</span><span class="tag">IntelliJ IDEA</span>
+              <span class="tag">Jupyter</span><span class="tag">Unity</span><span class="tag">MAMP</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-title">Databases</div>
+            <div class="skill-tags">
+              <span class="tag">MSSQL</span><span class="tag">MySQL</span>
+              <span class="tag">PostgreSQL</span><span class="tag">phpMyAdmin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: EXPERIENCE -->
+    <div class="page" id="page-experience">
+      <div class="page-inner">
+        <p class="section-label">Experience</p>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-date">June 2025 – September 2025</div>
+            <div class="timeline-title">Engineering Intern</div>
+            <div class="timeline-org">Daikin Electronic Devices (M) Sdn Bhd</div>
+            <ul class="timeline-body">
+              <li>Built an inventory tracking system in C# and CSHTML for real-time stock management.</li>
+              <li>Maintained backend data consistency with Microsoft SQL Server.</li>
+              <li>Implemented AI-based search and advanced filtering for internal web platforms.</li>
+              <li>Assisted with SolidWorks technical modelling and design documentation.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 4: PROJECTS -->
+    <div class="page" id="page-projects">
+      <div class="page-inner">
+        <p class="section-label">Projects</p>
+        <div class="projects-grid">
+          <div class="project-card">
+            <div class="project-number">01</div>
+            <div class="project-title">Virtual Reactor Control Simulator</div>
+            <div class="project-desc">High-fidelity 3D industrial equipment simulation for Chemical Engineering education. Built in Unity with SolidWorks-sourced models and custom C# simulation logic.</div>
+            <div class="project-tech">
+              <span class="tag">Unity</span><span class="tag">C#</span><span class="tag">SolidWorks</span>
+            </div>
+          </div>
+          <div class="project-card">
+            <div class="project-number">02</div>
+            <div class="project-title">Inventory Management System</div>
+            <div class="project-desc">Full-stack inventory system with barcode scanner integration, real-time flow tracking, and a relational backend for high-traffic warehouse environments.</div>
+            <div class="project-tech">
+              <span class="tag">C#</span><span class="tag">CSHTML</span><span class="tag">MSSQL</span>
+            </div>
+          </div>
+          <div class="project-card">
+            <div class="project-number">03</div>
+            <div class="project-title">CRM Web Application</div>
+            <div class="project-desc">Customer relationship management platform with PHP/MySQL backend, dynamic front-end interactions in JavaScript, and a full phpMyAdmin-managed database layer.</div>
+            <div class="project-tech">
+              <span class="tag">PHP</span><span class="tag">MySQL</span><span class="tag">JavaScript</span><span class="tag">HTML/CSS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 5: EDUCATION -->
+    <div class="page" id="page-education">
+      <div class="page-inner">
+        <p class="section-label">Education</p>
+        <div class="edu-grid">
+          <div class="edu-card">
+            <div class="edu-year">2024 – 2027 (Expected)</div>
+            <div class="edu-degree">BSc Computer Science – AI</div>
+            <div class="edu-school">University of Nottingham Malaysia</div>
+          </div>
+          <div class="edu-card">
+            <div class="edu-year">2024</div>
+            <div class="edu-degree">Foundation in Science</div>
+            <div class="edu-school">University of Nottingham · Avg 71.67</div>
+          </div>
+          <div class="edu-card">
+            <div class="edu-year">2023</div>
+            <div class="edu-degree">Sijil Pelajaran Malaysia (SPM)</div>
+            <div class="edu-school">5 A's</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 6: CONTACT -->
+    <div class="page" id="page-contact">
+      <div class="page-inner">
+        <p class="section-label">Contact</p>
+        <div class="contact-wrapper">
+          <div class="contact-text">
+            <h2>Let's build something together.</h2>
+            <p>Open to internship opportunities, collaborative projects, and interesting problems.</p>
+            <a href="mailto:shuenhere@gmail.com" class="btn btn-primary">Send a message</a>
+          </div>
+          <div class="contact-links">
+            <a href="mailto:shuenhere@gmail.com" class="contact-link">
+              <div class="contact-link-icon">@</div>shuenhere@gmail.com
+            </a>
+            <a href="tel:+60128895261" class="contact-link">
+              <div class="contact-link-icon">#</div>+6012-889 5261
+            </a>
+            <a href="https://github.com/shuen-05" target="_blank" rel="noopener" class="contact-link">
+              <div class="contact-link-icon">GH</div>github.com/shuen-05
+            </a>
+            <a class="contact-link">
+              <div class="contact-link-icon">📍</div>Shah Alam, Selangor, Malaysia
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <p>Tan Shuen Xian · 2025</p>
+        <p>Built with HTML · CSS · JS</p>
+      </div>
+    </div>
+
+  </div><!-- /viewport -->
+
+  <script>
+    /* ══════════════════════════════════
+       PAGE SWITCHER
+    ══════════════════════════════════ */
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const total = pages.length;
+    let current = 0;
+    let animating = false;
+
+    const ANIM_DURATION = 750;
+
+    function goTo(idx, dir) {
+      if (idx === current || animating || idx < 0 || idx >= total) return;
+      animating = true;
+
+      const outPage = pages[current];
+      const inPage  = pages[idx];
+      const goDown  = idx > current; // scrolling forward
+
+      /* direction classes */
+      const exitClass  = goDown  ? 'exit-to-above'    : 'exit-to-below';
+      const enterClass = goDown  ? 'enter-from-below'  : 'enter-from-above';
+
+      /* prime the incoming page */
+      inPage.style.transform = goDown ? 'translateY(100%)' : 'translateY(-100%)';
+      inPage.style.opacity   = '0';
+      inPage.style.transition = 'none';
+      inPage.classList.remove('active', 'enter-from-below', 'enter-from-above', 'exit-to-above', 'exit-to-below');
+      inPage.style.pointerEvents = 'none';
+
+      /* force reflow */
+      void inPage.offsetWidth;
+
+      /* animate out */
+      outPage.classList.add(exitClass);
+
+      /* animate in */
+      inPage.style.transform = '';
+      inPage.style.opacity   = '';
+      inPage.style.transition = '';
+      inPage.classList.add(enterClass, 'active');
+
+      current = idx;
+      updateUI();
+
+      setTimeout(() => {
+        outPage.classList.remove('active', exitClass);
+        outPage.style.transform = '';
+        outPage.style.opacity   = '';
+        inPage.classList.remove(enterClass);
+        inPage.style.pointerEvents = '';
+        animating = false;
+      }, ANIM_DURATION);
+    }
+
+    function updateUI() {
+      /* dots */
+      document.querySelectorAll('.dot-btn').forEach((d, i) => d.classList.toggle('active', i === current));
+      /* nav links */
+      document.querySelectorAll('.nav-links a').forEach(a => {
+        a.classList.toggle('active', parseInt(a.dataset.goto) === current);
+      });
+      /* counter */
+      document.getElementById('cur-page').textContent = String(current + 1).padStart(2, '0');
+      /* arrows */
+      document.getElementById('scroll-up').classList.toggle('visible', current > 0);
+      document.getElementById('scroll-down').classList.toggle('visible', current < total - 1);
+    }
+
+    /* ── CLICK TRIGGERS ── */
+    document.querySelectorAll('[data-goto]').forEach(el => {
+      el.addEventListener('click', () => goTo(parseInt(el.dataset.goto), current));
+    });
+    document.getElementById('scroll-up').addEventListener('click', () => goTo(current - 1));
+    document.getElementById('scroll-down').addEventListener('click', () => goTo(current + 1));
+
+    /* ── WHEEL ── */
+    let wheelCooldown = false;
+    window.addEventListener('wheel', e => {
+      if (wheelCooldown || animating) return;
+      wheelCooldown = true;
+      if (e.deltaY > 30)  goTo(current + 1);
+      if (e.deltaY < -30) goTo(current - 1);
+      setTimeout(() => wheelCooldown = false, 900);
+    }, { passive: true });
+
+    /* ── KEYBOARD ── */
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); goTo(current + 1); }
+      if (e.key === 'ArrowUp'   || e.key === 'PageUp')   { e.preventDefault(); goTo(current - 1); }
+    });
+
+    /* ── TOUCH ── */
+    let touchY = 0;
+    window.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+    window.addEventListener('touchend', e => {
+      const dy = touchY - e.changedTouches[0].clientY;
+      if (Math.abs(dy) > 40) dy > 0 ? goTo(current + 1) : goTo(current - 1);
+    }, { passive: true });
+
+    /* init */
+    updateUI();
+    pages[0].classList.add('active');
+
+    /* ══════════════════════════════════
+       PARTICLE CANVAS
+    ══════════════════════════════════ */
+    const canvas = document.getElementById('particle-canvas');
+    const ctx    = canvas.getContext('2d');
+    let W, H, particles = [];
+    const mouse = { x: -9999, y: -9999 };
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', () => { resize(); initParticles(); });
+
+    document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    document.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+    class Particle {
+      constructor() { this.reset(true); }
+      reset(init = false) {
+        this.x  = Math.random() * W;
+        this.y  = init ? Math.random() * H : H + 10;
+        this.ox = this.x; this.oy = this.y;
+        this.vx = (Math.random() - 0.5) * 0.2;
+        this.vy = -(Math.random() * 0.3 + 0.1);
+        this.r  = Math.random() * 1.4 + 0.4;
+        this.a  = Math.random() * 0.5 + 0.15;
+        this.life = Math.random() * 400 + 200;
+        this.age  = 0;
+      }
+      update() {
+        const dx = this.x - mouse.x, dy = this.y - mouse.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const rep = 120;
+        if (dist < rep && dist > 0) {
+          const f = (rep - dist) / rep;
+          this.x += (dx/dist) * f * 2.5;
+          this.y += (dy/dist) * f * 2.5;
+        } else {
+          this.x += (this.ox - this.x)*0.03 + this.vx;
+          this.y += (this.oy - this.y)*0.03 + this.vy;
+          this.ox += this.vx; this.oy += this.vy;
+        }
+        this.age++;
+        if (this.oy < -10 || this.age > this.life) this.reset();
+      }
+      draw() {
+        const fade = Math.min(this.age/60,1) * Math.min((this.life-this.age)/60,1);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(124,159,255,${this.a*fade})`;
+        ctx.fill();
+      }
+    }
+
+    function initParticles() { particles = Array.from({length:140}, () => new Particle()); }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i+1; j < particles.length; j++) {
+          const a = particles[i], b = particles[j];
+          const dx = a.x-b.x, dy = a.y-b.y;
+          const d = Math.sqrt(dx*dx+dy*dy);
+          if (d < 90) {
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(124,159,255,${(1-d/90)*0.12})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function tick() {
+      ctx.clearRect(0,0,W,H);
+      drawConnections();
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(tick);
+    }
+
+    initParticles(); tick();
+
+    /* ══════════════════════════════════
+       CUSTOM CURSOR
+    ══════════════════════════════════ */
+    const dot  = document.getElementById('cursorDot');
+    const ring = document.getElementById('cursorRing');
+    let rx = 0, ry = 0, mx = 0, my = 0;
+
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; dot.style.left = mx+'px'; dot.style.top = my+'px'; });
+
+    (function animRing() {
+      rx += (mx - rx) * 0.12;
+      ry += (my - ry) * 0.12;
+      ring.style.left = rx+'px'; ring.style.top = ry+'px';
+      requestAnimationFrame(animRing);
+    })();
+  </script>
+</body>
+</html>
