@@ -289,10 +289,55 @@
     }
 
     /* hero children animate in on load */
-    #page-hero.active .hero-eyebrow { animation: fadeUp 0.7s 0.1s both; }
-    #page-hero.active .hero-name    { animation: fadeUp 0.7s 0.25s both; }
-    #page-hero.active .hero-sub     { animation: fadeUp 0.7s 0.4s both; }
-    #page-hero.active .hero-cta     { animation: fadeUp 0.7s 0.55s both; }
+    #page-hero.active .hero-eyebrow  { animation: fadeUp 0.7s 0.1s both; }
+    #page-hero.active .hero-name     { animation: fadeUp 0.7s 0.25s both; }
+    #page-hero.active .hero-sub      { animation: fadeUp 0.7s 0.4s both; }
+    #page-hero.active .hero-cta      { animation: fadeUp 0.7s 0.55s both; }
+    #page-hero.active .hero-contacts { animation: fadeUp 0.7s 0.7s both; }
+
+    /* ── HERO CONTACT ROW ── */
+    .hero-contacts {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+      pointer-events: all;
+    }
+
+    .hero-contact-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .hero-contact-link:hover { color: var(--accent); }
+
+    .hero-contact-icon {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent-dim);
+      border: 1px solid rgba(124,159,255,0.2);
+      border-radius: 2px;
+      padding: 0.1rem 0.38rem;
+      line-height: 1.5;
+    }
+    .hero-contact-link:hover .hero-contact-icon {
+      color: var(--accent);
+      border-color: rgba(124,159,255,0.5);
+    }
+
+    .hero-contact-divider {
+      color: var(--border);
+      font-family: var(--mono);
+      font-size: 16px;
+      line-height: 1;
+    }
 
     @keyframes fadeUp {
       from { opacity:0; transform: translateY(22px); }
@@ -625,7 +670,7 @@
 
   <!-- NAV -->
   <nav>
-    <div class="nav-logo" data-goto="0">TSX</div>
+    <div class="nav-logo" data-goto="0">SHUEN</div>
     <ul class="nav-links">
       <li><a data-goto="0">Home</a></li>
       <li><a data-goto="1">About</a></li>
@@ -669,6 +714,19 @@
         <div class="hero-cta">
           <a class="btn btn-primary" data-goto="4">View work</a>
           <a class="btn btn-outline" data-goto="6">Get in touch</a>
+        </div>
+        <div class="hero-contacts">
+          <a href="mailto:shuenhere@gmail.com" class="hero-contact-link">
+            <span class="hero-contact-icon">@</span>shuenhere@gmail.com
+          </a>
+          <span class="hero-contact-divider">·</span>
+          <a href="tel:+60128895261" class="hero-contact-link">
+            <span class="hero-contact-icon">#</span>+6012-889 5261
+          </a>
+          <span class="hero-contact-divider">·</span>
+          <a href="https://github.com/shuen-05" target="_blank" rel="noopener" class="hero-contact-link">
+            <span class="hero-contact-icon">GH</span>shuen-05
+          </a>
         </div>
       </div>
     </div>
