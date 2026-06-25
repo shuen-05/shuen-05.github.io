@@ -1,0 +1,2225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tan Shuen Xian</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0b0d;
+      --surface:   #111114;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #e8e6e1;
+      --muted:     #6b6b72;
+      --accent:    #7c9fff;
+      --accent-dim:#3a5599;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Inter', sans-serif;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 300;
+      font-size: clamp(15px, 1.2vw, 19px);
+      line-height: 1.7;
+    }
+
+    /* ── VIEWPORT STACK ── */
+    #viewport {
+      width: 100%; height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      will-change: transform, opacity;
+      /* default: hidden below */
+      transform: translateY(100%);
+      opacity: 0;
+      pointer-events: none;
+      transition: none;
+    }
+
+    .page.active {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: all;
+      transition: none;
+    }
+
+    /* pages animate IN depending on direction */
+    .page.enter-from-below  { animation: enterBelow  0.75s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .page.enter-from-above  { animation: enterAbove  0.75s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .page.exit-to-above     { animation: exitAbove   0.6s  cubic-bezier(0.4,0,1,1)     forwards; }
+    .page.exit-to-below     { animation: exitBelow   0.6s  cubic-bezier(0.4,0,1,1)     forwards; }
+
+    @keyframes enterBelow { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes enterAbove { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes exitAbove  { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+    @keyframes exitBelow  { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 4rem;
+      background: rgba(11,11,13,0.6);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+
+    .nav-links { display: flex; gap: 2.5rem; list-style: none; }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+
+    /* ── SECTION INDICATOR (dots) ── */
+    #dots {
+      position: fixed;
+      right: 2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .dot-btn {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+      padding: 0;
+    }
+    .dot-btn.active {
+      background: var(--accent);
+      transform: scale(1.5);
+    }
+
+    /* ── PAGE COUNTER ── */
+    #page-counter {
+      position: fixed;
+      bottom: 2rem;
+      right: 2.5rem;
+      z-index: 200;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    #page-counter span { color: var(--accent); }
+
+    /* ── SCROLL ARROWS ── */
+    #scroll-down, #scroll-up {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      background: none;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.4s;
+      color: var(--muted);
+      padding: 0.5rem;
+    }
+    #scroll-down { bottom: 1.8rem; }
+    #scroll-up   { top: 5.5rem; }
+    #scroll-down.visible, #scroll-up.visible { opacity: 1; }
+    #scroll-down:hover, #scroll-up:hover { color: var(--accent); }
+    #scroll-down svg, #scroll-up svg { display: block; }
+
+    /* ── CURSOR ── */
+    .cursor-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%,-50%);
+    }
+    .cursor-ring {
+      width: 28px; height: 28px;
+      border: 1px solid rgba(124,159,255,0.4);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: width 0.2s, height 0.2s;
+    }
+
+    /* ── BTN ── */
+    .btn {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.7rem 1.6rem;
+      border-radius: 2px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid;
+      display: inline-block;
+    }
+    .btn-primary { background: var(--accent); color: #0b0b0d; border-color: var(--accent); }
+    .btn-primary:hover { background: #9db5ff; border-color: #9db5ff; }
+    .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── SECTION LABEL ── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: clamp(10px, 0.85vw, 13px);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: clamp(1.5rem, 3vh, 3rem);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .section-label::after {
+      content: '';
+      width: 60px; height: 1px;
+      background: var(--border);
+    }
+
+    .tag {
+      font-family: var(--mono);
+      font-size: clamp(11px, 0.85vw, 14px);
+      color: var(--muted);
+      background: rgba(124,159,255,0.06);
+      border: 1px solid rgba(124,159,255,0.12);
+      border-radius: 2px;
+      padding: 0.2rem 0.7rem;
+      cursor: default;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tag:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ═══════════════════════════════════════
+       PAGE 0 — HERO
+    ═══════════════════════════════════════ */
+    #page-hero { flex-direction: column; }
+
+    #particle-canvas {
+      position: absolute;
+      inset: 0; width: 100%; height: 100%;
+    }
+
+    .hero-content {
+      position: relative; z-index: 2;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-name {
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .hero-name span { color: var(--accent); }
+
+    .hero-sub {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 400px;
+      margin: 0 auto 2.5rem;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      gap: 1rem;
+      pointer-events: all;
+    }
+
+    /* hero children animate in on load */
+    #page-hero.active .hero-eyebrow  { animation: fadeUp 0.7s 0.1s both; }
+    #page-hero.active .hero-name     { animation: fadeUp 0.7s 0.25s both; }
+    #page-hero.active .hero-sub      { animation: fadeUp 0.7s 0.4s both; }
+    #page-hero.active .hero-cta      { animation: fadeUp 0.7s 0.55s both; }
+    #page-hero.active .hero-contacts { animation: fadeUp 0.7s 0.7s both; }
+
+    /* ── HERO CONTACT ROW ── */
+    .hero-contacts {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+      pointer-events: all;
+    }
+
+    .hero-contact-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .hero-contact-link:hover { color: var(--accent); }
+
+    .hero-contact-icon {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent-dim);
+      border: 1px solid rgba(124,159,255,0.2);
+      border-radius: 2px;
+      padding: 0.1rem 0.38rem;
+      line-height: 1.5;
+    }
+    .hero-contact-link:hover .hero-contact-icon {
+      color: var(--accent);
+      border-color: rgba(124,159,255,0.5);
+    }
+
+    .hero-contact-divider {
+      color: var(--border);
+      font-family: var(--mono);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(22px); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 1 — ABOUT
+       Entrance: content panels scale+fade in from center
+    ═══════════════════════════════════════ */
+    .page-inner {
+      width: 100%;
+      max-width: min(1400px, 92vw);
+      padding: clamp(4rem, 8vh, 7rem) clamp(1.5rem, 5vw, 5rem) clamp(2rem, 4vh, 4rem);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(2rem, 4vw, 5rem);
+      align-items: start;
+    }
+
+    .about-text p { color: var(--muted); margin-bottom: 1rem; font-size: clamp(15px, 1.3vw, 19px); }
+    .about-text p strong { color: var(--text); font-weight: 400; }
+
+    .about-stats { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.6rem, 1vw, 1.2rem); }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: clamp(1rem, 2vh, 1.8rem) clamp(1rem, 1.5vw, 1.8rem);
+      transition: border-color 0.2s, transform 0.2s;
+      cursor: default;
+    }
+    .stat-card:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
+
+    .stat-num {
+      font-family: var(--mono);
+      font-size: clamp(1.6rem, 2.5vw, 3rem);
+      color: var(--accent);
+      font-weight: 300;
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+    .stat-label { font-family: var(--mono); font-size: clamp(10px, 0.9vw, 13px); color: var(--muted); }
+
+    /* About entrance: panels pop in with stagger */
+    #page-about.enter-from-below .about-text,
+    #page-about.enter-from-above .about-text {
+      animation: scaleIn 0.65s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    #page-about.enter-from-below .about-stats,
+    #page-about.enter-from-above .about-stats {
+      animation: scaleIn 0.65s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    #page-about.enter-from-below .section-label,
+    #page-about.enter-from-above .section-label {
+      animation: fadeUp 0.5s 0.05s both;
+    }
+
+    @keyframes scaleIn {
+      from { opacity:0; transform: scale(0.93) translateY(16px); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 2 — SKILLS
+       Entrance: tags fly in row by row
+    ═══════════════════════════════════════ */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(160px, 18vw, 280px), 1fr));
+      gap: clamp(1rem, 1.5vw, 2rem);
+    }
+
+    .skill-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: clamp(1rem, 1.8vh, 2rem) clamp(1rem, 1.5vw, 1.8rem);
+      transition: border-color 0.2s;
+    }
+    .skill-group:hover { border-color: var(--accent-dim); }
+
+    .skill-group-title {
+      font-family: var(--mono);
+      font-size: clamp(10px, 0.85vw, 13px);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: clamp(0.6rem, 1vh, 1.2rem);
+    }
+
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    /* skills stagger by group index */
+    #page-skills.enter-from-below .skill-group:nth-child(1),
+    #page-skills.enter-from-above .skill-group:nth-child(1) { animation: slideRight 0.55s 0.1s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .skill-group:nth-child(2),
+    #page-skills.enter-from-above .skill-group:nth-child(2) { animation: slideRight 0.55s 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .skill-group:nth-child(3),
+    #page-skills.enter-from-above .skill-group:nth-child(3) { animation: slideRight 0.55s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .skill-group:nth-child(4),
+    #page-skills.enter-from-above .skill-group:nth-child(4) { animation: slideRight 0.55s 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-skills.enter-from-below .section-label,
+    #page-skills.enter-from-above .section-label { animation: fadeUp 0.4s 0.0s both; }
+
+    @keyframes slideRight {
+      from { opacity:0; transform: translateX(-32px); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 3 — EXPERIENCE
+       Entrance: timeline draws down line first, then items fade
+    ═══════════════════════════════════════ */
+    .timeline { position: relative; padding-left: 1.5rem; }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 1px;
+      background: var(--border);
+    }
+
+    #page-experience.enter-from-below .timeline::before,
+    #page-experience.enter-from-above .timeline::before {
+      animation: drawLine 0.7s 0.2s ease both;
+    }
+
+    @keyframes drawLine {
+      from { transform: scaleY(0); transform-origin: top; }
+      to   { transform: scaleY(1); transform-origin: top; }
+    }
+
+    .timeline-item { position: relative; padding-bottom: 3rem; padding-left: 1.5rem; }
+    .timeline-item:last-child { padding-bottom: 0; }
+
+    .timeline-dot {
+      position: absolute; left: -1.55rem; top: 8px;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+      transition: transform 0.2s;
+    }
+    .timeline-item:hover .timeline-dot { transform: scale(1.5); }
+
+    .timeline-date { font-family: var(--mono); font-size: clamp(10px, 0.85vw, 13px); color: var(--muted); letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+    .timeline-title { font-size: clamp(15px, 1.4vw, 20px); font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+    .timeline-org { font-family: var(--mono); font-size: clamp(11px, 1vw, 15px); color: var(--accent); margin-bottom: 0.8rem; }
+    .timeline-body { color: var(--muted); font-size: clamp(13px, 1.1vw, 16px); }
+    .timeline-body li { list-style: none; padding-left: 1rem; position: relative; margin-bottom: 0.4rem; }
+    .timeline-body li::before { content: '—'; position: absolute; left: 0; color: var(--accent-dim); font-family: var(--mono); }
+
+    #page-experience.enter-from-below .timeline-item,
+    #page-experience.enter-from-above .timeline-item { animation: fadeUp 0.6s 0.4s both; }
+    #page-experience.enter-from-below .section-label,
+    #page-experience.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    /* ═══════════════════════════════════════
+       PAGE 4 — PROJECTS
+       Entrance: cards flip/rise with stagger
+    ═══════════════════════════════════════ */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(220px, 22vw, 360px), 1fr));
+      gap: clamp(1rem, 1.5vw, 2rem);
+    }
+
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: clamp(1.2rem, 2vh, 2.2rem) clamp(1.2rem, 1.8vw, 2.2rem);
+      transition: border-color 0.25s, transform 0.25s;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+    .project-card:hover { border-color: var(--accent-dim); transform: translateY(-4px); }
+    .project-card:hover::before { transform: scaleX(1); }
+
+    .project-number { font-family: var(--mono); font-size: clamp(10px, 0.85vw, 13px); color: var(--accent-dim); margin-bottom: 0.8rem; }
+    .project-title  { font-size: clamp(14px, 1.2vw, 18px); font-weight: 500; color: var(--text); margin-bottom: 0.8rem; }
+    .project-desc   { font-size: clamp(12px, 1vw, 15px); color: var(--muted); margin-bottom: 1.2rem; line-height: 1.6; }
+    .project-tech   { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+    #page-projects.enter-from-below .project-card:nth-child(1),
+    #page-projects.enter-from-above .project-card:nth-child(1) { animation: riseCard 0.6s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-projects.enter-from-below .project-card:nth-child(2),
+    #page-projects.enter-from-above .project-card:nth-child(2) { animation: riseCard 0.6s 0.27s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-projects.enter-from-below .project-card:nth-child(3),
+    #page-projects.enter-from-above .project-card:nth-child(3) { animation: riseCard 0.6s 0.39s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-projects.enter-from-below .section-label,
+    #page-projects.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    @keyframes riseCard {
+      from { opacity:0; transform: translateY(40px) scale(0.96); }
+      to   { opacity:1; transform: none; }
+    }
+
+    /* ═══════════════════════════════════════
+       PAGE 5 — EDUCATION
+    ═══════════════════════════════════════ */
+    .edu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(clamp(200px, 20vw, 340px), 1fr));
+      gap: clamp(0.8rem, 1.2vw, 1.5rem);
+    }
+
+    .edu-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: clamp(1.2rem, 2vh, 2rem) clamp(1.2rem, 1.8vw, 2rem);
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .edu-card:hover { border-color: var(--accent-dim); transform: translateY(-2px); }
+
+    .edu-year   { font-family: var(--mono); font-size: clamp(10px, 0.85vw, 13px); color: var(--muted); margin-bottom: 0.5rem; }
+    .edu-degree { font-size: clamp(14px, 1.2vw, 18px); font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+    .edu-school { font-family: var(--mono); font-size: clamp(11px, 0.9vw, 14px); color: var(--accent); }
+
+    #page-education.enter-from-below .edu-card:nth-child(1),
+    #page-education.enter-from-above .edu-card:nth-child(1) { animation: slideRight 0.55s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-education.enter-from-below .edu-card:nth-child(2),
+    #page-education.enter-from-above .edu-card:nth-child(2) { animation: slideRight 0.55s 0.28s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-education.enter-from-below .edu-card:nth-child(3),
+    #page-education.enter-from-above .edu-card:nth-child(3) { animation: slideRight 0.55s 0.41s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-education.enter-from-below .section-label,
+    #page-education.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    /* ═══════════════════════════════════════
+       PAGE 6 — CONTACT
+       Entrance: split reveal (left text / right links)
+    ═══════════════════════════════════════ */
+    .contact-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(2rem, 4vw, 5rem);
+      align-items: center;
+    }
+
+    .contact-text h2 { font-size: clamp(1.6rem, 2.8vw, 3rem); font-weight: 300; margin-bottom: 0.8rem; }
+    .contact-text p  { color: var(--muted); font-size: clamp(13px, 1.1vw, 16px); margin-bottom: 2rem; }
+
+    .contact-links { display: flex; flex-direction: column; gap: clamp(0.7rem, 1.2vh, 1.2rem); }
+
+    .contact-link {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-family: var(--mono);
+      font-size: clamp(12px, 1vw, 15px);
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .contact-link:hover { color: var(--accent); }
+
+    .contact-link-icon {
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      flex-shrink: 0;
+      transition: border-color 0.2s;
+    }
+    .contact-link:hover .contact-link-icon { border-color: var(--accent); }
+
+    #page-contact.enter-from-below .contact-text,
+    #page-contact.enter-from-above .contact-text { animation: slideFromLeft 0.65s 0.15s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-contact.enter-from-below .contact-links,
+    #page-contact.enter-from-above .contact-links { animation: slideFromRight 0.65s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+    #page-contact.enter-from-below .section-label,
+    #page-contact.enter-from-above .section-label { animation: fadeUp 0.4s 0.05s both; }
+
+    @keyframes slideFromLeft  { from { opacity:0; transform: translateX(-40px); } to { opacity:1; transform:none; } }
+    @keyframes slideFromRight { from { opacity:0; transform: translateX(40px);  } to { opacity:1; transform:none; } }
+
+    /* ── FOOTER inside contact page ── */
+    .page-footer {
+      position: absolute;
+      bottom: 1.5rem; left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 4rem;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { display: none; }
+      .page-inner { padding: 5rem 1.5rem 3rem; }
+      .about-grid, .contact-wrapper { grid-template-columns: 1fr; gap: 2rem; }
+      #dots { display: none; }
+      .cursor-dot, .cursor-ring { display: none; }
+      .page-footer { padding: 0 1.5rem; }
+    }
+
+    /* ══════════════════════════════════
+       GLITCH EFFECT — hero name
+    ══════════════════════════════════ */
+    .hero-name {
+      position: relative;
+    }
+    .hero-name.glitch {
+      animation: glitch-main 0.45s steps(2,end) both;
+    }
+    .hero-name.glitch::before,
+    .hero-name.glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      color: var(--text);
+    }
+    .hero-name.glitch::before {
+      left: 2px;
+      clip-path: polygon(0 20%, 100% 20%, 100% 35%, 0 35%);
+      animation: glitch-top 0.45s steps(2,end) both;
+      color: #7c9fff;
+      opacity: 0.85;
+    }
+    .hero-name.glitch::after {
+      left: -2px;
+      clip-path: polygon(0 65%, 100% 65%, 100% 80%, 0 80%);
+      animation: glitch-bot 0.45s steps(2,end) both;
+      color: #ff7c9f;
+      opacity: 0.75;
+    }
+    @keyframes glitch-main {
+      0%,100% { transform: none; }
+      20%  { transform: skewX(-3deg); }
+      40%  { transform: skewX(2deg) translateX(2px); }
+      60%  { transform: skewX(-1deg) translateX(-2px); }
+      80%  { transform: skewX(1.5deg); }
+    }
+    @keyframes glitch-top {
+      0%,100% { transform: translateX(0); }
+      25%  { transform: translateX(-4px); }
+      50%  { transform: translateX(4px); }
+      75%  { transform: translateX(-2px); }
+    }
+    @keyframes glitch-bot {
+      0%,100% { transform: translateX(0); }
+      25%  { transform: translateX(4px); }
+      50%  { transform: translateX(-3px); }
+      75%  { transform: translateX(2px); }
+    }
+
+    /* ══════════════════════════════════
+       3D TILT — project cards
+    ══════════════════════════════════ */
+    .project-card {
+      transform-style: preserve-3d;
+      transform-origin: center center;
+      will-change: transform;
+    }
+    /* The existing hover translateY(-4px) is overridden by JS tilt; keep ::before as is */
+
+    /* ══════════════════════════════════
+       RIPPLE — click effect
+    ══════════════════════════════════ */
+    .ripple {
+      position: fixed;
+      border-radius: 50%;
+      width: 6px; height: 6px;
+      background: rgba(124, 159, 255, 0.35);
+      pointer-events: none;
+      z-index: 9990;
+      transform: translate(-50%, -50%) scale(0);
+      animation: ripple-expand 0.7s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    @keyframes ripple-expand {
+      to { transform: translate(-50%, -50%) scale(36); opacity: 0; }
+    }
+
+    /* ══════════════════════════════════
+       STAT COUNTER — about page
+    ══════════════════════════════════ */
+    .stat-num[data-count] {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ══════════════════════════════════
+       MAGNETIC — buttons & nav
+    ══════════════════════════════════ */
+    .btn, .nav-links a, .nav-logo {
+      display: inline-block; /* needed for transform */
+      transition: transform 0.25s cubic-bezier(0.22,1,0.36,1), color 0.2s, background 0.2s, border-color 0.2s;
+    }
+
+    /* ══════════════════════════════════
+       SKILL PROFICIENCY BAR
+    ══════════════════════════════════ */
+    .tag {
+      position: relative;
+      overflow: hidden;
+    }
+    .tag::after {
+      content: '';
+      position: absolute;
+      left: 0; bottom: 0;
+      height: 2px;
+      width: var(--pct, 80%);
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+    }
+    .tag:hover::after {
+      transform: scaleX(1);
+    }
+
+    /* ══════════════════════════════════
+       SCANLINE OVERLAY — subtle CRT vibe
+    ══════════════════════════════════ */
+    #scanlines {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9000;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+    }
+
+    /* ══════════════════════════════════
+       MASCOT
+    ══════════════════════════════════ */
+    #mascot-wrap {
+      position: fixed;
+      top: calc(100% - 180px);
+      right: 0;
+      z-index: 9500;
+      width: 64px;
+      height: 72px;
+      cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size: 24px;'><text y='24'>🫳</text></svg>") 12 12, pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transform: translateX(calc(100% - 12px));
+      transition: none;
+      transform-origin: bottom center;
+    }
+    #mascot-wrap.out {
+      transform: translateY(0);
+    }
+    #mascot-wrap.dragging {
+      transition: none;
+      cursor: grabbing !important;
+    }
+    #mascot-svg {
+      width: 64px;
+      height: 72px;
+      overflow: visible;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.45));
+      transition: filter 0.3s;
+    }
+    #mascot-wrap:hover #mascot-svg {
+      filter: drop-shadow(0 6px 16px rgba(0,0,0,0.65));
+    }
+    #mascot-body-group {
+      transform-origin: 32px 56px;
+    }
+    #mascot-wrap.happy #mascot-body-group {
+      animation: mascot-happy 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes mascot-happy {
+      0%   { transform: translateY(0); }
+      28%  { transform: translateY(-12px) scaleY(1.07) scaleX(0.94); }
+      55%  { transform: translateY(3px)  scaleY(0.93) scaleX(1.05); }
+      75%  { transform: translateY(-4px); }
+      100% { transform: translateY(0); }
+    }
+    #mascot-wrap.out:not(.dragging) #mascot-svg {
+      animation: mascot-float 3.5s ease-in-out infinite;
+    }
+    @keyframes mascot-float {
+      0%,100% { transform: translateY(0px) rotate(0deg); }
+      50%     { transform: translateY(-6px) rotate(1.5deg); }
+    }
+    .mascot-ear-l {
+      transform-origin: 16px 18px;
+      animation: ear-twitch-l 6s ease-in-out infinite;
+    }
+    .mascot-ear-r {
+      transform-origin: 48px 18px;
+      animation: ear-twitch-r 6s ease-in-out infinite 0.5s;
+    }
+    #mascot-wrap.pat .mascot-ear-l {
+      animation: ear-pat-l 0.45s ease-out;
+    }
+    #mascot-wrap.pat .mascot-ear-r {
+      animation: ear-pat-r 0.45s ease-out;
+    }
+    @keyframes ear-twitch-l {
+      0%, 90%, 100% { transform: rotate(0deg); }
+      93% { transform: rotate(-8deg); }
+      96% { transform: rotate(4deg); }
+    }
+    @keyframes ear-twitch-r {
+      0%, 90%, 100% { transform: rotate(0deg); }
+      93% { transform: rotate(8deg); }
+      96% { transform: rotate(-4deg); }
+    }
+    @keyframes ear-pat-l {
+      0%, 100% { transform: rotate(0deg); }
+      30%      { transform: rotate(-22deg); }
+      70%      { transform: rotate(10deg); }
+    }
+    @keyframes ear-pat-r {
+      0%, 100% { transform: rotate(0deg); }
+      30%      { transform: rotate(22deg); }
+      70%      { transform: rotate(-10deg); }
+    }
+    #mascot-tail {
+      transform-origin: 12px 58px;
+      animation: tail-wag 4s ease-in-out infinite;
+    }
+    @keyframes tail-wag {
+      0%, 100% { transform: rotate(0deg); }
+      50%     { transform: rotate(-12deg); }
+    }
+    #mascot-bubble {
+      position: absolute;
+      bottom: 76px;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 6px 6px 2px 6px;
+      padding: 5px 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.85) translateY(4px);
+      transform-origin: bottom right;
+      transition: opacity 0.2s, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #mascot-bubble.show {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+    .food-item {
+      position: fixed;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      pointer-events: all;
+      cursor: grab;
+      z-index: 9400;
+      opacity: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      animation: food-float 6.5s ease-in-out forwards;
+      text-shadow: 0 0 8px rgba(124, 159, 255, 0.4);
+      border: 1px solid rgba(124, 159, 255, 0.18);
+      border-radius: 3px;
+      padding: 3px 8px;
+      background: rgba(11, 11, 13, 0.8);
+      backdrop-filter: blur(4px);
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .food-item:hover {
+      border-color: rgba(124,159,255,0.6);
+      transform: scale(1.1);
+    }
+    .food-item.dragging {
+      cursor: grabbing !important;
+      z-index: 9999 !important;
+      opacity: 1 !important;
+    }
+    body.hide-custom-cursor .cursor-dot,
+    body.hide-custom-cursor .cursor-ring {
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transition: opacity 0.15s ease;
+    }
+    @keyframes food-float {
+      0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
+      8%   { opacity: 1; }
+      82%  { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-70px) rotate(6deg); }
+    }
+    .nom-burst {
+      position: fixed;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      pointer-events: none;
+      z-index: 9600;
+      animation: nom-pop 0.65s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    @keyframes nom-pop {
+      0%   { opacity: 1; transform: scale(0.5) translateY(0); }
+      55%  { opacity: 1; transform: scale(1.5) translateY(-18px); }
+      100% { opacity: 0; transform: scale(1)   translateY(-32px); }
+    }
+    .mascot-heart {
+      position: fixed;
+      font-size: 13px;
+      pointer-events: none;
+      z-index: 9600;
+      animation: heart-rise 1s ease-out forwards;
+    }
+    @keyframes heart-rise {
+      0%   { opacity: 1; transform: translateY(0)    scale(0.5); }
+      35%  { opacity: 1; transform: translateY(-20px) scale(1.15); }
+      100% { opacity: 0; transform: translateY(-52px) scale(0.9); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+  <div id="scanlines"></div>
+
+  <!-- MASCOT -->
+  <div id="mascot-wrap" title="Click to peek · Hold to drag · Feed it code!">
+    <div id="mascot-bubble"></div>
+    <svg id="mascot-svg" viewBox="0 0 64 72" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- BMO body gradient -->
+        <linearGradient id="bmo-body-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#64a599"/>
+          <stop offset="100%" stop-color="#4e8f83"/>
+        </linearGradient>
+        <radialGradient id="mg-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="rgba(0,0,0,0.15)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+        </radialGradient>
+        <!-- eyeball clips for eyelids (centered at cy=28) -->
+        <clipPath id="eye-l-clip-path"><circle cx="21" cy="28" r="4"/></clipPath>
+        <clipPath id="eye-r-clip-path"><circle cx="43" cy="28" r="4"/></clipPath>
+      </defs>
+
+      <g id="mascot-body-group">
+        <!-- glow shadow behind -->
+        <ellipse cx="32" cy="63" rx="22" ry="6" fill="url(#mg-glow)"/>
+
+        <!-- BMO Legs & Feet (placed behind body) -->
+        <!-- Left Leg outline + fill -->
+        <line x1="22" y1="62" x2="22" y2="67" stroke="#000000" stroke-width="4" stroke-linecap="round"/>
+        <line x1="22" y1="62" x2="22" y2="67" stroke="#599b8f" stroke-width="2" stroke-linecap="round"/>
+        
+        <!-- Right Leg outline + fill -->
+        <line x1="42" y1="62" x2="42" y2="67" stroke="#000000" stroke-width="4" stroke-linecap="round"/>
+        <line x1="42" y1="62" x2="42" y2="67" stroke="#599b8f" stroke-width="2" stroke-linecap="round"/>
+
+        <!-- Feet -->
+        <ellipse cx="23" cy="67" rx="4.5" ry="2" fill="#599b8f" stroke="#000000" stroke-width="1.2"/>
+        <ellipse cx="43" cy="67" rx="4.5" ry="2" fill="#599b8f" stroke="#000000" stroke-width="1.2"/>
+
+        <!-- BMO body console (box with slightly rounded corners rx=6) -->
+        <rect x="10" y="14" width="44" height="49" rx="6" fill="url(#bmo-body-grad)" stroke="#000000" stroke-width="1.5"/>
+
+        <!-- BMO Screen (minty green) -->
+        <rect x="14" y="18" width="36" height="24" rx="4" fill="#c7f5d9" stroke="#000000" stroke-width="1.2"/>
+
+        <!-- eyes (white-green eyeball bases centered at cy=28) -->
+        <circle id="eye-l" cx="21" cy="28" r="4" fill="#c7f5d9"/>
+        <circle id="eye-r" cx="43" cy="28" r="4" fill="#c7f5d9"/>
+        <!-- eye pupils (solid black dots) -->
+        <circle id="pupil-l" cx="21" cy="28" r="1.5" fill="#000000"/>
+        <circle id="pupil-r" cx="43" cy="28" r="1.5" fill="#000000"/>
+
+        <!-- eyelids (covers inside group clipped by eyeball path) -->
+        <g clip-path="url(#eye-l-clip-path)">
+          <rect id="eye-l-lid" x="14" y="18" width="14" height="0" fill="#c7f5d9" stroke="#000000" stroke-width="1.2"/>
+        </g>
+        <g clip-path="url(#eye-r-clip-path)">
+          <rect id="eye-r-lid" x="36" y="18" width="14" height="0" fill="#c7f5d9" stroke="#000000" stroke-width="1.2"/>
+        </g>
+
+        <!-- mouth (BMO smile curve, neutral) -->
+        <path id="mascot-mouth" d="M26 36 Q32 40 38 36" fill="none" stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- BMO Face Controls (below screen) -->
+        <!-- Black floppy slot -->
+        <rect x="19" y="45" width="26" height="2" rx="0.5" fill="#1b2d2a" stroke="#000000" stroke-width="0.8"/>
+
+        <!-- Yellow D-Pad -->
+        <path d="M 17 53 L 20 53 L 20 50 L 22 50 L 22 53 L 25 53 L 25 55 L 22 55 L 22 58 L 20 58 L 20 55 L 17 55 Z" fill="#ffca28" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+
+        <!-- Blue Triangle Button -->
+        <path d="M 32 54 L 35 50 L 38 54 Z" fill="#00acc1" stroke="#000000" stroke-width="1" stroke-linejoin="round"/>
+
+        <!-- Green Circle Button -->
+        <circle cx="44" cy="52" r="2" fill="#4caf50" stroke="#000000" stroke-width="1"/>
+
+        <!-- Red Circle Button -->
+        <circle cx="39" cy="59" r="3.2" fill="#e91e63" stroke="#000000" stroke-width="1"/>
+
+        <!-- Start/Select buttons (two blue slots) -->
+        <rect x="18" y="60" width="4" height="1.2" rx="0.5" fill="#37474f" stroke="#000000" stroke-width="0.8"/>
+        <rect x="24" y="60" width="4" height="1.2" rx="0.5" fill="#37474f" stroke="#000000" stroke-width="0.8"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo" data-goto="0">SHUEN</div>
+    <ul class="nav-links">
+      <li><a data-goto="0">Home</a></li>
+      <li><a data-goto="1">About</a></li>
+      <li><a data-goto="2">Skills</a></li>
+      <li><a data-goto="3">Experience</a></li>
+      <li><a data-goto="4">Projects</a></li>
+      <li><a data-goto="5">Education</a></li>
+      <li><a data-goto="6">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- SECTION DOTS -->
+  <div id="dots">
+    <button class="dot-btn" data-goto="0" title="Home"></button>
+    <button class="dot-btn" data-goto="1" title="About"></button>
+    <button class="dot-btn" data-goto="2" title="Skills"></button>
+    <button class="dot-btn" data-goto="3" title="Experience"></button>
+    <button class="dot-btn" data-goto="4" title="Projects"></button>
+    <button class="dot-btn" data-goto="5" title="Education"></button>
+    <button class="dot-btn" data-goto="6" title="Contact"></button>
+  </div>
+
+  <button id="scroll-up" aria-label="Previous section">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+  </button>
+  <button id="scroll-down" aria-label="Next section">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+  </button>
+
+  <div id="page-counter"><span id="cur-page">01</span> / 07</div>
+
+  <div id="viewport">
+
+    <!-- PAGE 0: HERO -->
+    <div class="page active" id="page-hero">
+      <canvas id="particle-canvas"></canvas>
+      <div class="hero-content">
+        <p class="hero-eyebrow">Computer Science · AI · Full-Stack</p>
+        <h1 class="hero-name" data-text="Tan Shuen Xian">Tan <span>Shuen Xian</span></h1>
+        <p class="hero-sub">Building data-driven software &amp; technical simulations.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" data-goto="4">View work</a>
+          <a class="btn btn-outline" data-goto="6">Get in touch</a>
+        </div>
+        <div class="hero-contacts">
+          <a href="mailto:shuenhere@gmail.com" class="hero-contact-link">
+            <span class="hero-contact-icon">@</span>shuenhere@gmail.com
+          </a>
+          <span class="hero-contact-divider">·</span>
+          <a href="tel:+60128895261" class="hero-contact-link">
+            <span class="hero-contact-icon">#</span>+6012-889 5261
+          </a>
+          <span class="hero-contact-divider">·</span>
+          <a href="https://github.com/shuen-05" target="_blank" rel="noopener" class="hero-contact-link">
+            <span class="hero-contact-icon">GH</span>shuen-05
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 1: ABOUT -->
+    <div class="page" id="page-about">
+      <div class="page-inner">
+        <p class="section-label">About</p>
+        <div class="about-grid">
+          <div class="about-text">
+            <p>I'm a <strong>Computer Science (AI) student</strong> at the University of Nottingham Malaysia, graduating in 2027. I have a strong interest in backend systems, data pipelines, and technical simulations.</p>
+            <p>Outside of code, I work with <strong>SolidWorks and Blender</strong> to build high-fidelity 3D models — combining engineering precision with software thinking.</p>
+            <p>I'm trilingual in <strong>English, Mandarin, and Malay</strong>, and thrive in cross-functional teams bridging design and engineering.</p>
+          </div>
+          <div class="about-stats">
+            <div class="stat-card">
+              <div class="stat-num" data-count="3" data-suffix="+">0+</div>
+              <div class="stat-label">Projects shipped</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num" data-count="5">0</div>
+              <div class="stat-label">Languages in code</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num" data-count="2027">0</div>
+              <div class="stat-label">Expected graduation</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-num" data-count="3">0</div>
+              <div class="stat-label">Spoken languages</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: SKILLS -->
+    <div class="page" id="page-skills">
+      <div class="page-inner">
+        <p class="section-label">Skills</p>
+        <div class="skills-grid">
+          <div class="skill-group">
+            <div class="skill-group-title">Programming</div>
+            <div class="skill-tags">
+              <span class="tag" style="--pct:85%">Java</span><span class="tag" style="--pct:75%">C</span><span class="tag" style="--pct:90%">Python</span>
+              <span class="tag" style="--pct:80%">C#</span><span class="tag" style="--pct:85%">HTML/CSS</span><span class="tag" style="--pct:65%">PHP</span><span class="tag" style="--pct:78%">SQL</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-title">3D Modelling</div>
+            <div class="skill-tags">
+              <span class="tag" style="--pct:80%">SolidWorks</span><span class="tag" style="--pct:70%">Blender</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-title">Tools</div>
+            <div class="skill-tags">
+              <span class="tag" style="--pct:95%">VS Code</span><span class="tag" style="--pct:85%">IntelliJ IDEA</span>
+              <span class="tag" style="--pct:80%">Jupyter</span><span class="tag" style="--pct:75%">Unity</span><span class="tag" style="--pct:70%">MAMP</span>
+            </div>
+          </div>
+          <div class="skill-group">
+            <div class="skill-group-title">Databases</div>
+            <div class="skill-tags">
+              <span class="tag" style="--pct:85%">MSSQL</span><span class="tag" style="--pct:80%">MySQL</span>
+              <span class="tag" style="--pct:75%">PostgreSQL</span><span class="tag" style="--pct:70%">phpMyAdmin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: EXPERIENCE -->
+    <div class="page" id="page-experience">
+      <div class="page-inner">
+        <p class="section-label">Experience</p>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-date">June 2025 – September 2025</div>
+            <div class="timeline-title">Engineering Intern</div>
+            <div class="timeline-org">Daikin Electronic Devices (M) Sdn Bhd</div>
+            <ul class="timeline-body">
+              <li>Built an inventory tracking system in C# and CSHTML for real-time stock management.</li>
+              <li>Maintained backend data consistency with Microsoft SQL Server.</li>
+              <li>Implemented AI-based search and advanced filtering for internal web platforms.</li>
+              <li>Assisted with SolidWorks technical modelling and design documentation.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 4: PROJECTS -->
+    <div class="page" id="page-projects">
+      <div class="page-inner">
+        <p class="section-label">Projects</p>
+        <div class="projects-grid">
+          <div class="project-card">
+            <div class="project-number">01</div>
+            <div class="project-title">Virtual Reactor Control Simulator</div>
+            <div class="project-desc">High-fidelity 3D industrial equipment simulation for Chemical Engineering education. Built in Unity with SolidWorks-sourced models and custom C# simulation logic.</div>
+            <div class="project-tech">
+              <span class="tag">Unity</span><span class="tag">C#</span><span class="tag">SolidWorks</span>
+            </div>
+          </div>
+          <div class="project-card">
+            <div class="project-number">02</div>
+            <div class="project-title">Inventory Management System</div>
+            <div class="project-desc">Full-stack inventory system with barcode scanner integration, real-time flow tracking, and a relational backend for high-traffic warehouse environments.</div>
+            <div class="project-tech">
+              <span class="tag">C#</span><span class="tag">CSHTML</span><span class="tag">MSSQL</span>
+            </div>
+          </div>
+          <div class="project-card">
+            <div class="project-number">03</div>
+            <div class="project-title">CRM Web Application</div>
+            <div class="project-desc">Customer relationship management platform with PHP/MySQL backend, dynamic front-end interactions in JavaScript, and a full phpMyAdmin-managed database layer.</div>
+            <div class="project-tech">
+              <span class="tag">PHP</span><span class="tag">MySQL</span><span class="tag">JavaScript</span><span class="tag">HTML/CSS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 5: EDUCATION -->
+    <div class="page" id="page-education">
+      <div class="page-inner">
+        <p class="section-label">Education</p>
+        <div class="edu-grid">
+          <div class="edu-card">
+            <div class="edu-year">2024 – 2027 (Expected)</div>
+            <div class="edu-degree">BSc Computer Science – AI</div>
+            <div class="edu-school">University of Nottingham Malaysia</div>
+          </div>
+          <div class="edu-card">
+            <div class="edu-year">2024</div>
+            <div class="edu-degree">Foundation in Science</div>
+            <div class="edu-school">University of Nottingham Malaysia</div>
+          </div>
+          <div class="edu-card">
+            <div class="edu-year">2023</div>
+            <div class="edu-degree">Sijil Pelajaran Malaysia (SPM)</div>
+            <div class="edu-school">SMJK Kwang Hua</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 6: CONTACT -->
+    <div class="page" id="page-contact">
+      <div class="page-inner">
+        <p class="section-label">Contact</p>
+        <div class="contact-wrapper">
+          <div class="contact-text">
+            <h2>Let's build something together.</h2>
+            <p>Open to internship opportunities, collaborative projects, and interesting problems.</p>
+            <a href="mailto:shuenhere@gmail.com" class="btn btn-primary">Send a message</a>
+          </div>
+          <div class="contact-links">
+            <a href="mailto:shuenhere@gmail.com" class="contact-link">
+              <div class="contact-link-icon">@</div>shuenhere@gmail.com
+            </a>
+            <a href="tel:+60128895261" class="contact-link">
+              <div class="contact-link-icon">#</div>+6012-889 5261
+            </a>
+            <a href="https://github.com/shuen-05" target="_blank" rel="noopener" class="contact-link">
+              <div class="contact-link-icon">GH</div>github.com/shuen-05
+            </a>
+            <a class="contact-link">
+              <div class="contact-link-icon">📍</div>Shah Alam, Selangor, Malaysia
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <p>Tan Shuen Xian · 2025</p>
+        <p>Built with HTML · CSS · JS</p>
+      </div>
+    </div>
+
+  </div><!-- /viewport -->
+
+  <script>
+    /* ══════════════════════════════════
+       PAGE SWITCHER
+    ══════════════════════════════════ */
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const total = pages.length;
+    let current = 0;
+    let animating = false;
+
+    const ANIM_DURATION = 750;
+
+    function goTo(idx, dir) {
+      if (idx === current || animating || idx < 0 || idx >= total) return;
+      animating = true;
+
+      const outPage = pages[current];
+      const inPage  = pages[idx];
+      const goDown  = idx > current; // scrolling forward
+
+      /* direction classes */
+      const exitClass  = goDown  ? 'exit-to-above'    : 'exit-to-below';
+      const enterClass = goDown  ? 'enter-from-below'  : 'enter-from-above';
+
+      /* prime the incoming page */
+      inPage.style.transform = goDown ? 'translateY(100%)' : 'translateY(-100%)';
+      inPage.style.opacity   = '0';
+      inPage.style.transition = 'none';
+      inPage.classList.remove('active', 'enter-from-below', 'enter-from-above', 'exit-to-above', 'exit-to-below');
+      inPage.style.pointerEvents = 'none';
+
+      /* force reflow */
+      void inPage.offsetWidth;
+
+      /* animate out */
+      outPage.classList.add(exitClass);
+
+      /* animate in */
+      inPage.style.transform = '';
+      inPage.style.opacity   = '';
+      inPage.style.transition = '';
+      inPage.classList.add(enterClass, 'active');
+
+      current = idx;
+      updateUI();
+
+      setTimeout(() => {
+        outPage.classList.remove('active', exitClass);
+        outPage.style.transform = '';
+        outPage.style.opacity   = '';
+        inPage.classList.remove(enterClass);
+        inPage.style.pointerEvents = '';
+        animating = false;
+      }, ANIM_DURATION);
+    }
+
+    function updateUI() {
+      /* dots */
+      document.querySelectorAll('.dot-btn').forEach((d, i) => d.classList.toggle('active', i === current));
+      /* nav links */
+      document.querySelectorAll('.nav-links a').forEach(a => {
+        a.classList.toggle('active', parseInt(a.dataset.goto) === current);
+      });
+      /* counter */
+      document.getElementById('cur-page').textContent = String(current + 1).padStart(2, '0');
+      /* arrows */
+      document.getElementById('scroll-up').classList.toggle('visible', current > 0);
+      document.getElementById('scroll-down').classList.toggle('visible', current < total - 1);
+    }
+
+    /* ── CLICK TRIGGERS ── */
+    document.querySelectorAll('[data-goto]').forEach(el => {
+      el.addEventListener('click', () => goTo(parseInt(el.dataset.goto), current));
+    });
+    document.getElementById('scroll-up').addEventListener('click', () => goTo(current - 1));
+    document.getElementById('scroll-down').addEventListener('click', () => goTo(current + 1));
+
+    /* ── WHEEL ── */
+    let wheelCooldown = false;
+    window.addEventListener('wheel', e => {
+      if (wheelCooldown || animating) return;
+      wheelCooldown = true;
+      if (e.deltaY > 30)  goTo(current + 1);
+      if (e.deltaY < -30) goTo(current - 1);
+      setTimeout(() => wheelCooldown = false, 900);
+    }, { passive: true });
+
+    /* ── KEYBOARD ── */
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); goTo(current + 1); }
+      if (e.key === 'ArrowUp'   || e.key === 'PageUp')   { e.preventDefault(); goTo(current - 1); }
+    });
+
+    /* ── TOUCH ── */
+    let touchY = 0;
+    window.addEventListener('touchstart', e => { touchY = e.touches[0].clientY; }, { passive: true });
+    window.addEventListener('touchend', e => {
+      const dy = touchY - e.changedTouches[0].clientY;
+      if (Math.abs(dy) > 40) dy > 0 ? goTo(current + 1) : goTo(current - 1);
+    }, { passive: true });
+
+    /* init */
+    updateUI();
+    pages[0].classList.add('active');
+
+    /* ══════════════════════════════════
+       PARTICLE CANVAS
+    ══════════════════════════════════ */
+    const canvas = document.getElementById('particle-canvas');
+    const ctx    = canvas.getContext('2d');
+    let W, H, particles = [];
+    const mouse = { x: -9999, y: -9999 };
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', () => { resize(); initParticles(); });
+
+    document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    document.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+    class Particle {
+      constructor() { this.reset(true); }
+      reset(init = false) {
+        this.x  = Math.random() * W;
+        this.y  = init ? Math.random() * H : H + 10;
+        this.ox = this.x; this.oy = this.y;
+        this.vx = (Math.random() - 0.5) * 0.2;
+        this.vy = -(Math.random() * 0.3 + 0.1);
+        this.r  = Math.random() * 1.4 + 0.4;
+        this.a  = Math.random() * 0.5 + 0.15;
+        this.life = Math.random() * 400 + 200;
+        this.age  = 0;
+      }
+      update() {
+        const dx = this.x - mouse.x, dy = this.y - mouse.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const rep = 120;
+        if (dist < rep && dist > 0) {
+          const f = (rep - dist) / rep;
+          this.x += (dx/dist) * f * 2.5;
+          this.y += (dy/dist) * f * 2.5;
+        } else {
+          this.x += (this.ox - this.x)*0.03 + this.vx;
+          this.y += (this.oy - this.y)*0.03 + this.vy;
+          this.ox += this.vx; this.oy += this.vy;
+        }
+        this.age++;
+        if (this.oy < -10 || this.age > this.life) this.reset();
+      }
+      draw() {
+        const fade = Math.min(this.age/60,1) * Math.min((this.life-this.age)/60,1);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(124,159,255,${this.a*fade})`;
+        ctx.fill();
+      }
+    }
+
+    function initParticles() { particles = Array.from({length:140}, () => new Particle()); }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i+1; j < particles.length; j++) {
+          const a = particles[i], b = particles[j];
+          const dx = a.x-b.x, dy = a.y-b.y;
+          const d = Math.sqrt(dx*dx+dy*dy);
+          if (d < 90) {
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(124,159,255,${(1-d/90)*0.12})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function tick() {
+      ctx.clearRect(0,0,W,H);
+      drawConnections();
+      particles.forEach(p => { p.update(); p.draw(); });
+      requestAnimationFrame(tick);
+    }
+
+    initParticles(); tick();
+
+    /* ══════════════════════════════════
+       CUSTOM CURSOR
+    ══════════════════════════════════ */
+    const dot  = document.getElementById('cursorDot');
+    const ring = document.getElementById('cursorRing');
+    let rx = 0, ry = 0, mx = 0, my = 0;
+
+    document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; dot.style.left = mx+'px'; dot.style.top = my+'px'; });
+
+    (function animRing() {
+      rx += (mx - rx) * 0.12;
+      ry += (my - ry) * 0.12;
+      ring.style.left = rx+'px'; ring.style.top = ry+'px';
+      requestAnimationFrame(animRing);
+    })();
+  </script>
+  <script>
+    /* ══════════════════════════════════
+       GLITCH — hero name
+       Fires on page load (after hero animates in) and on hover
+    ══════════════════════════════════ */
+    const heroName = document.querySelector('.hero-name');
+
+    function triggerGlitch() {
+      heroName.classList.remove('glitch');
+      void heroName.offsetWidth; // reflow
+      heroName.classList.add('glitch');
+    }
+
+    // Initial glitch after hero loads
+    setTimeout(triggerGlitch, 1000);
+
+    // Hover glitch — throttled
+    let glitchCooldown = false;
+    heroName.addEventListener('mouseenter', () => {
+      if (glitchCooldown) return;
+      glitchCooldown = true;
+      triggerGlitch();
+      setTimeout(() => glitchCooldown = false, 800);
+    });
+
+    heroName.addEventListener('animationend', () => {
+      heroName.classList.remove('glitch');
+    });
+
+    /* ══════════════════════════════════
+       STAT COUNTER — about page
+       Triggers when page-about becomes active
+    ══════════════════════════════════ */
+    let countersDone = false;
+
+    function animateCounters() {
+      if (countersDone) return;
+      countersDone = true;
+      document.querySelectorAll('.stat-num[data-count]').forEach(el => {
+        const target  = parseInt(el.dataset.count);
+        const suffix  = el.dataset.suffix || '';
+        const dur     = target > 100 ? 1400 : 700;
+        const start   = performance.now();
+        function frame(now) {
+          const t = Math.min((now - start) / dur, 1);
+          // ease out quart
+          const ease = 1 - Math.pow(1 - t, 4);
+          el.textContent = Math.round(ease * target) + suffix;
+          if (t < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    // Hook into the page switcher's goTo — watch when page-about becomes active
+    const origGoTo = window.goTo; // defined in the first script block
+    // We patch via MutationObserver instead since goTo is scoped
+    const aboutPage = document.getElementById('page-about');
+    new MutationObserver(() => {
+      if (aboutPage.classList.contains('active')) {
+        setTimeout(animateCounters, 350); // slight delay for enter anim
+      }
+    }).observe(aboutPage, { attributes: true, attributeFilter: ['class'] });
+
+    /* ══════════════════════════════════
+       3D TILT — project cards
+    ══════════════════════════════════ */
+    document.querySelectorAll('.project-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect   = card.getBoundingClientRect();
+        const cx     = rect.left + rect.width  / 2;
+        const cy     = rect.top  + rect.height / 2;
+        const dx     = (e.clientX - cx) / (rect.width  / 2); // -1 to 1
+        const dy     = (e.clientY - cy) / (rect.height / 2);
+        const rotX   = -dy * 8; // degrees
+        const rotY   =  dx * 8;
+        card.style.transform = `perspective(700px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-4px)`;
+        // move the accent line to follow cursor
+        const pct = ((dx + 1) / 2 * 100).toFixed(1);
+        card.style.setProperty('--shine-x', pct + '%');
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = '';
+      });
+    });
+
+    /* ══════════════════════════════════
+       MAGNETIC — buttons & nav links
+    ══════════════════════════════════ */
+    const magnetTargets = document.querySelectorAll('.btn, .nav-links a, .nav-logo');
+
+    magnetTargets.forEach(el => {
+      el.addEventListener('mousemove', e => {
+        const rect = el.getBoundingClientRect();
+        const cx   = rect.left + rect.width  / 2;
+        const cy   = rect.top  + rect.height / 2;
+        const dx   = (e.clientX - cx);
+        const dy   = (e.clientY - cy);
+        const pull = 0.28; // strength
+        el.style.transform = `translate(${dx * pull}px, ${dy * pull}px)`;
+      });
+
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = '';
+      });
+    });
+
+    /* ══════════════════════════════════
+       RIPPLE — click anywhere
+    ══════════════════════════════════ */
+    document.addEventListener('click', e => {
+      const rip = document.createElement('div');
+      rip.className = 'ripple';
+      rip.style.left = e.clientX + 'px';
+      rip.style.top  = e.clientY + 'px';
+      document.body.appendChild(rip);
+      rip.addEventListener('animationend', () => rip.remove());
+    });
+
+    /* ══════════════════════════════════
+       CURSOR EXPANSION on hover
+    ══════════════════════════════════ */
+    const cursorRing = document.getElementById('cursorRing');
+    const hoverables = document.querySelectorAll('a, button, .btn, .tag, .project-card, .stat-card, .edu-card');
+    hoverables.forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        cursorRing.style.width  = '48px';
+        cursorRing.style.height = '48px';
+        cursorRing.style.borderColor = 'rgba(124,159,255,0.7)';
+      });
+      el.addEventListener('mouseleave', () => {
+        cursorRing.style.width  = '';
+        cursorRing.style.height = '';
+        cursorRing.style.borderColor = '';
+      });
+    });
+  </script>
+  <script>
+  /* ══════════════════════════════════
+     MASCOT SYSTEM
+     ══════════════════════════════════ */
+  (function() {
+    const wrap    = document.getElementById('mascot-wrap');
+    const bubble  = document.getElementById('mascot-bubble');
+    const mouthEl = document.getElementById('mascot-mouth');
+    const pupilL  = document.getElementById('pupil-l');
+    const pupilR  = document.getElementById('pupil-r');
+
+    /* ── PHYSICS STATE ── */
+    let px = window.innerWidth - 76;
+    let py = window.innerHeight - 72;
+    let vx = 0;
+    let vy = 0;
+    let angle = 0;
+    let scaleX = 1;
+    let scaleY = 1;
+
+    let mouseX = 0;
+    let mouseY = 0;
+    let dragging = false;
+    let dragOffX = 0;
+    let dragOffY = 0;
+    let holdTimer = null;
+    let isDraggable = false;
+
+    /* ── STATE ── */
+    let state       = 'idle'; // peeking | idle | happy | eating
+    let idleTimer   = null;
+    let blinkTimer  = null;
+    let foodTimer   = null;
+    let bubbleTimer = null;
+    let patCount    = 0;
+    let hasBeenDragged = true;
+    let peekOffsetTarget = 12;
+    let baseScale   = 1.0;
+
+    /* ── MESSAGES ── */
+    const messages = {
+      peek:  ['...', 'BMO!', 'Who wants to play?', '*whistles*'],
+      idle:  ['BMO time!', 'I am a real baby!', 'Yay!', '*beep*', 'yay BMO!', 'zzz...', 'Beep boop'],
+      pat:   ['Haha!', 'That tickles!', 'Ooh!', 'BMO is happy!', '♡ ♡'],
+      food:  ['Yum!', 'Yes!', 'Oh boy!', 'Delicious!', 'fed! (ᵔᴥᵔ)'],
+      drag:  ['Whoa!', 'Wheee!', 'Is this real?', 'I\'m flying!'],
+    };
+
+    /* food tokens themed to the portfolio */
+    const foodTokens = [
+      '{  }', '</>', '[ ]', '0x1', '&&', '>=', '=>', '++',
+      'fn()', '/**/', '.py', '.cs', 'git', 'sql', 'npm', 'api',
+    ];
+
+    /* ── HELPERS ── */
+    function showBubble(text, dur = 1800) {
+      clearTimeout(bubbleTimer);
+      bubble.textContent = text;
+      bubble.classList.add('show');
+      bubbleTimer = setTimeout(() => bubble.classList.remove('show'), dur);
+    }
+
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function addAnim(cls, ms = 500) {
+      wrap.classList.remove(cls);
+      void wrap.offsetWidth;
+      wrap.classList.add(cls);
+      setTimeout(() => wrap.classList.remove(cls), ms);
+    }
+
+    function spawnHeart() {
+      const rect = wrap.getBoundingClientRect();
+      const h = document.createElement('div');
+      h.className = 'mascot-heart';
+      h.textContent = '♡';
+      h.style.left = (rect.left + 20 + Math.random() * 24) + 'px';
+      h.style.top  = (rect.top  + 10) + 'px';
+      h.style.color = Math.random() > 0.5 ? '#7c9fff' : '#ff9fcc';
+      document.body.appendChild(h);
+      h.addEventListener('animationend', () => h.remove());
+    }
+
+    function spawnNom(x, y, text) {
+      const n = document.createElement('div');
+      n.className = 'nom-burst';
+      n.textContent = 'nom! ' + text;
+      n.style.left = x + 'px';
+      n.style.top  = y + 'px';
+      document.body.appendChild(n);
+      n.addEventListener('animationend', () => n.remove());
+    }
+
+    function checkCollision(el1, el2) {
+      const r1 = el1.getBoundingClientRect();
+      const r2 = el2.getBoundingClientRect();
+      return !(r1.right < r2.left ||
+               r1.left > r2.right ||
+               r1.bottom < r2.top ||
+               r1.top > r2.bottom);
+    }
+
+    /* ── BLINK ── */
+    function scheduleBlink() {
+      clearTimeout(blinkTimer);
+      const delay = 2500 + Math.random() * 3500;
+      blinkTimer = setTimeout(doBlink, delay);
+    }
+
+    function doBlink() {
+      const lidL = document.getElementById('eye-l-lid');
+      const lidR = document.getElementById('eye-r-lid');
+      if (!lidL) { scheduleBlink(); return; }
+
+      lidL.setAttribute('height', '12');
+      lidR.setAttribute('height', '12');
+      lidL.setAttribute('y', '21.5');
+      lidR.setAttribute('y', '21.5');
+
+      setTimeout(() => {
+        lidL.setAttribute('height', '0');
+        lidR.setAttribute('height', '0');
+        scheduleBlink();
+      }, 110);
+    }
+
+    /* ── EYE TRACKING & POSITION CAPTURE ── */
+    document.addEventListener('mousemove', e => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      updateEyes(mouseX, mouseY);
+    });
+
+    document.addEventListener('touchmove', e => {
+      if (e.touches && e.touches[0]) {
+        mouseX = e.touches[0].clientX;
+        mouseY = e.touches[0].clientY;
+        updateEyes(mouseX, mouseY);
+      }
+    }, { passive: true });
+
+    function updateEyes(targetX, targetY) {
+      if (state === 'peeking' || dragging) return;
+      const rect = wrap.getBoundingClientRect();
+      const cx = rect.left + 32, cy = rect.top + 28;
+      const dx = targetX - cx, dy = targetY - cy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      const factor = activeDraggedFood ? 0.06 : 0.04;
+      const maxMove = activeDraggedFood ? 3.5 : 2;
+      
+      const nx = dist > 0 ? (dx / dist) * Math.min(dist * factor, maxMove) : 0;
+      const ny = dist > 0 ? (dy / dist) * Math.min(dist * factor, maxMove) : 0;
+      pupilL.setAttribute('cx', 21 + nx);
+      pupilL.setAttribute('cy', 28 + ny);
+      pupilR.setAttribute('cx', 43 + nx);
+      pupilR.setAttribute('cy', 28 + ny);
+    }
+
+    /* ── MOUTH STATES ── */
+    function setMouth(type) {
+      const paths = {
+        neutral: 'M26 36 Q32 40 38 36',
+        happy:   'M24 34 Q32 42 40 34',
+        nom:     'M24 34 Q32 43 40 34',
+        owo:     'M26 35 Q29 33 32 35 Q35 33 38 35',
+      };
+      mouthEl.setAttribute('d', paths[type] || paths.neutral);
+    }
+
+    /* ── IDLE RETURN ── */
+    function resetIdleTimer() {
+      clearTimeout(idleTimer);
+    }
+
+    function goToIdle() {
+      state = 'idle';
+      wrap.classList.add('out');
+      setMouth('happy');
+      scheduleBlink();
+      resetIdleTimer();
+      startFoodSpawning();
+      setTimeout(() => {
+        if (state === 'idle') showBubble(pickRandom(messages.idle), 2200);
+      }, 600);
+    }
+
+    /* ── PHYSICS LOOP ── */
+    function updatePhysics() {
+      const homeX = (state === 'peeking') ? (window.innerWidth - peekOffsetTarget) : (window.innerWidth - 80);
+      const homeY = (state === 'peeking') ? (window.innerHeight - 180) : (window.innerHeight - 72);
+
+      if (dragging) {
+        // Drag physics: pull towards cursor with lower spring tension for smoother lag
+        const targetX = mouseX - dragOffX;
+        const targetY = mouseY - dragOffY;
+
+        const ax = (targetX - px) * 0.12;
+        const ay = (targetY - py) * 0.12;
+
+        vx = (vx + ax) * 0.82;
+        vy = (vy + ay) * 0.82;
+
+        px += vx;
+        py += vy;
+
+        // Swing rotation based on horizontal speed
+        const targetAngle = vx * 0.8;
+        angle += (targetAngle - angle) * 0.15;
+
+        // Reset squishing/stretching scale
+        scaleX += (1 - scaleX) * 0.15;
+        scaleY += (1 - scaleY) * 0.15;
+      } else {
+        // Drop physics: fall, bounce, and return home
+        const floorY = (state === 'peeking') ? (window.innerHeight - 180) : (window.innerHeight - 72);
+
+        if (state === 'peeking') {
+          // Slide smoothly into side-peeking offsets
+          px += (homeX - px) * 0.06;
+          py += (homeY - py) * 0.06;
+          vx = 0;
+          vy = 0;
+          angle += (0 - angle) * 0.08;
+        } else {
+          // Awake states (idle, happy, eating)
+          if (py < floorY || Math.abs(vy) > 0.15) {
+            // Apply slower gravity and air drag
+            vy += 0.35;
+            vx *= 0.98;
+            vy *= 0.98;
+
+            px += vx;
+            py += vy;
+
+            // Bounce on floor
+            if (py >= floorY) {
+              py = floorY;
+              if (vy > 1.5) {
+                scaleY = 0.8;
+                scaleX = 1.2;
+              }
+              vy = -vy * 0.25;
+              vx *= 0.75;
+            }
+
+            // Screen walls boundaries
+            if (px < 0) { px = 0; vx = -vx * 0.4; }
+            else if (px > window.innerWidth - 64) { px = window.innerWidth - 64; vx = -vx * 0.4; }
+
+            // Slide back horizontally ONLY if never dragged yet (waking up)
+            if (!hasBeenDragged && py >= floorY - 5) {
+              px += (homeX - px) * 0.03;
+            }
+
+            const targetAngle = vx * 0.6;
+            angle += (targetAngle - angle) * 0.08;
+          } else {
+            // Snap/settle position resting on floor or stand home
+            if (!hasBeenDragged) {
+              px += (homeX - px) * 0.03;
+              py += (homeY - py) * 0.03;
+            } else {
+              py += (floorY - py) * 0.08;
+            }
+            vx = 0;
+            vy = 0;
+            angle += (0 - angle) * 0.05;
+          }
+        }
+
+        // Recover squash and stretch scale
+        scaleX += (1 - scaleX) * 0.15;
+        scaleY += (1 - scaleY) * 0.15;
+      }
+
+
+
+
+
+      wrap.style.bottom = 'auto';
+      wrap.style.right  = 'auto';
+      wrap.style.left   = px + 'px';
+      wrap.style.top    = py + 'px';
+      wrap.style.transform = `rotate(${angle}deg) scale(${scaleX * baseScale}, ${scaleY * baseScale})`;
+    }
+
+    // Start physics loop
+    function initPhysics() {
+      if (physicsInitialized) return;
+      physicsInitialized = true;
+      function loop() {
+        updatePhysics();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    }
+    let physicsInitialized = false;
+    initPhysics();
+
+    /* ── CLICK HANDLER ── */
+    wrap.addEventListener('click', e => {
+      if (isDraggable || dragging) return;
+      e.stopPropagation();
+
+      if (state === 'peeking') {
+        goToIdle();
+        showBubble(pickRandom(messages.peek), 2000);
+        return;
+      }
+
+      // PAT (trigger CSS ear-wiggles and JS physics squishy squash!)
+      state = 'happy';
+      patCount++;
+      addAnim('pat', 450);
+      spawnHeart();
+      if (patCount % 3 === 0) spawnHeart();
+
+      // Squishy bounce!
+      scaleY = 0.65;
+      scaleX = 1.35;
+      vy = -3; // jump up slightly and fall back under gravity!
+
+      const msg = pickRandom(messages.pat);
+      showBubble(msg, 1500);
+      setMouth('happy');
+
+      clearTimeout(idleTimer);
+      setTimeout(() => {
+        state = 'idle';
+        setMouth('happy');
+        resetIdleTimer();
+      }, 1000);
+    });
+
+    /* ── MASCOT DRAG HANDLERS ── */
+    wrap.addEventListener('mousedown', startDragMascot);
+    wrap.addEventListener('touchstart', startDragMascot, { passive: false });
+
+    function startDragMascot(e) {
+      e.preventDefault();
+      isDraggable = false;
+
+      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+      const rect = wrap.getBoundingClientRect();
+      const clickOffX = clientX - rect.left;
+      const clickOffY = clientY - rect.top;
+
+      holdTimer = setTimeout(() => {
+        isDraggable = true;
+        dragging = true;
+        hasBeenDragged = true;
+        wrap.classList.add('dragging');
+        wrap.classList.add('out');
+        document.body.classList.add('hide-custom-cursor');
+
+        dragOffX = clickOffX;
+        dragOffY = clickOffY;
+
+        setMouth('owo');
+        showBubble(pickRandom(messages.drag), 1500);
+        clearTimeout(idleTimer);
+        clearTimeout(blinkTimer);
+      }, 200);
+    }
+
+    document.addEventListener('mouseup', endDragMascot);
+    document.addEventListener('touchend', endDragMascot);
+
+    function endDragMascot() {
+      clearTimeout(holdTimer);
+      if (!dragging) return;
+      
+      dragging = false;
+      wrap.classList.remove('dragging');
+      document.body.classList.remove('hide-custom-cursor');
+      setMouth('happy');
+
+      state = 'idle';
+      resetIdleTimer();
+      scheduleBlink();
+
+      setTimeout(() => isDraggable = false, 50);
+    }
+
+    /* ── FOOD SYSTEM (DRAGGABLE) ── */
+    let foodActive = [];
+    let activeDraggedFood = null;
+    let foodDragOffX = 0;
+    let foodDragOffY = 0;
+
+    function spawnFood() {
+      if (state === 'peeking') return;
+
+      const token = pickRandom(foodTokens);
+      const food  = document.createElement('div');
+      food.className = 'food-item';
+      food.textContent = token;
+
+      const safeRight = 120;
+      const x = Math.random() * (window.innerWidth  - safeRight - 60) + 30;
+      const y = Math.random() * (window.innerHeight - 160) + 60;
+      food.style.left = x + 'px';
+      food.style.top  = y + 'px';
+
+      document.body.appendChild(food);
+      foodActive.push(food);
+
+      // Drag food event handlers
+      food.addEventListener('mousedown', startDragFood);
+      food.addEventListener('touchstart', startDragFood, { passive: false });
+
+      function startDragFood(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        activeDraggedFood = food;
+        food.classList.add('dragging');
+        food.style.animation = 'none'; // Stop standard float animation on drag start
+        food.style.opacity = '1';
+
+        const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+        const rect = food.getBoundingClientRect();
+        
+        foodDragOffX = clientX - rect.left;
+        foodDragOffY = clientY - rect.top;
+
+        document.body.classList.add('hide-custom-cursor');
+      }
+
+      // Auto-remove when float animation ends (only if not currently dragged)
+      food.addEventListener('animationend', () => {
+        if (activeDraggedFood !== food) {
+          food.remove();
+          foodActive = foodActive.filter(f => f !== food);
+        }
+      });
+    }
+
+    // Global drag move for food
+    document.addEventListener('mousemove', dragFoodMove);
+    document.addEventListener('touchmove', dragFoodMove, { passive: false });
+
+    function dragFoodMove(e) {
+      if (!activeDraggedFood) return;
+
+      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
+      const x = clientX - foodDragOffX;
+      const y = clientY - foodDragOffY;
+
+      activeDraggedFood.style.left = x + 'px';
+      activeDraggedFood.style.top  = y + 'px';
+
+      // Feed collision feedback
+      if (checkCollision(activeDraggedFood, wrap)) {
+        setMouth('owo');
+        updateEyes(clientX, clientY);
+        showBubble('Gimme! (o.o)', 600);
+      } else {
+        setMouth('happy');
+      }
+    }
+
+    // Global drag end for food
+    document.addEventListener('mouseup', dropFood);
+    document.addEventListener('touchend', dropFood);
+
+    function dropFood() {
+      if (!activeDraggedFood) return;
+
+      const food = activeDraggedFood;
+      activeDraggedFood = null;
+      food.classList.remove('dragging');
+      document.body.classList.remove('hide-custom-cursor');
+
+      if (checkCollision(food, wrap)) {
+        // Successfully fed!
+        const rect = food.getBoundingClientRect();
+        const token = food.textContent;
+        spawnNom(rect.left, rect.top, token);
+        food.remove();
+        foodActive = foodActive.filter(f => f !== food);
+
+        state = 'happy';
+        addAnim('happy', 600);
+        setMouth('nom');
+        showBubble(pickRandom(messages.food), 1800);
+        spawnHeart();
+        resetIdleTimer();
+        baseScale = Math.min(baseScale + 0.15, 2.2);
+        setTimeout(() => {
+          if (state === 'happy') {
+            state = 'idle';
+            setMouth('happy');
+          }
+        }, 800);
+      } else {
+        // Outside drop: Fall down under gravity, fading out
+        let foodY = parseFloat(food.style.top);
+        let fvy = 0;
+
+        function fall() {
+          if (food.parentNode) {
+            fvy += 0.5;
+            foodY += fvy;
+            food.style.top = foodY + 'px';
+
+            let opacity = parseFloat(window.getComputedStyle(food).opacity);
+            food.style.opacity = Math.max(opacity - 0.05, 0);
+
+            if (foodY < window.innerHeight && opacity > 0.05) {
+              requestAnimationFrame(fall);
+            } else {
+              food.remove();
+              foodActive = foodActive.filter(f => f !== food);
+            }
+          }
+        }
+        requestAnimationFrame(fall);
+      }
+    }
+
+    function startFoodSpawning() {
+      stopFoodSpawning();
+      foodTimer = setTimeout(function loop() {
+        if (state !== 'peeking') spawnFood();
+        foodTimer = setTimeout(loop, 4000 + Math.random() * 3000);
+      }, 2000);
+    }
+
+    function stopFoodSpawning() {
+      clearTimeout(foodTimer);
+      foodActive.forEach(f => {
+        if (activeDraggedFood !== f) f.remove();
+      });
+      foodActive = foodActive.filter(f => activeDraggedFood === f);
+    }
+
+    /* ── PERIODIC IDLE CHATTER ── */
+    setInterval(() => {
+      if (state === 'idle' && !dragging && !activeDraggedFood && Math.random() < 0.35) {
+        showBubble(pickRandom(messages.idle), 2000);
+      }
+    }, 6000);
+
+    /* ── INIT ── */
+    goToIdle();
+
+    // Soft hop after 1.5 seconds to attract attention
+    setTimeout(() => {
+      if (!dragging) {
+        vy = -3;
+        scaleY = 0.75;
+        scaleX = 1.25;
+      }
+    }, 1500);
+
+  })();
+  </script>
+</body>
+</html>
